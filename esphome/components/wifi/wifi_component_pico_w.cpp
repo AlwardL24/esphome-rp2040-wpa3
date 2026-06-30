@@ -103,13 +103,17 @@ bool WiFiComponent::wifi_sta_connect_(const WiFiAP &ap) {
     return false;
 #endif
 
-  // Use beginNoBlock to avoid WiFi.begin()'s additional 2x timeout wait loop on top of
-  // CYW43::begin()'s internal blocking join. CYW43::begin() blocks for up to 10 seconds
-  // (default timeout) to complete the join - this is required because the LwipIntfDev netif
-  // setup depends on begin() succeeding. beginNoBlock() skips the outer wait loop, saving
-  // up to 20 additional seconds of blocking per attempt.
-  auto ret = WiFi.beginNoBlock(ap.ssid_.c_str(), ap.password_.c_str());
-  if (ret == WL_IDLE_STATUS)
+  // // Use beginNoBlock to avoid WiFi.begin()'s additional 2x timeout wait loop on top of
+  // // CYW43::begin()'s internal blocking join. CYW43::begin() blocks for up to 10 seconds
+  // // (default timeout) to complete the join - this is required because the LwipIntfDev netif
+  // // setup depends on begin() succeeding. beginNoBlock() skips the outer wait loop, saving
+  // // up to 20 additional seconds of blocking per attempt.
+  // auto ret = WiFi.beginNoBlock(ap.ssid_.c_str(), ap.password_.c_str());
+  // if (ret == WL_IDLE_STATUS)
+  //   return false;
+
+  // Use the underlying implementation from pico/cyw43_arch.h to enable joining a WPA3 Personal network
+  if (cyw43_arch_wifi_connect_async(ap.ssid_.c_str(), ap.password_.c_str(), CYW43_AUTH_WPA3_SAE_AES_PSK))
     return false;
 
   return true;
