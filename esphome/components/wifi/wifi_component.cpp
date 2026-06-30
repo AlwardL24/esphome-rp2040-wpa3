@@ -1094,81 +1094,7 @@ void WiFiComponent::start_connecting(const WiFiAP &ap) {
     priority = this->get_sta_priority(ap.get_bssid());
   }
 
-  ESP_LOGI(TAG,
-           "Connecting to " LOG_SECRET("'%s'") " " LOG_SECRET("(%s)") " (priority %d, attempt %u/%u in phase %s)...",
-           ap.ssid_.c_str(), ap.has_bssid() ? bssid_s : LOG_STR_LITERAL("any"), priority, this->num_retried_ + 1,
-           get_max_retries_for_phase(this->retry_phase_), LOG_STR_ARG(retry_phase_to_log_string(this->retry_phase_)));
-
-#if 0
-#ifdef ESPHOME_LOG_HAS_VERBOSE
-  ESP_LOGV(TAG,
-           "Connection Params:\n"
-           "  SSID: '%s'",
-           ap.ssid_.c_str());
-  if (ap.has_bssid()) {
-    ESP_LOGV(TAG, "  BSSID: %s", bssid_s);
-  } else {
-    ESP_LOGV(TAG, "  BSSID: Not Set");
-  }
-
-#ifdef USE_WIFI_WPA2_EAP
-  const auto &eap_opt = ap.get_eap();
-  if (eap_opt.has_value()) {
-    const EAPAuth &eap_config = *eap_opt;
-    // clang-format off
-    ESP_LOGV(
-        TAG,
-        "  WPA2 Enterprise authentication configured:\n"
-        "    Identity: " LOG_SECRET("'%s'") "\n"
-        "    Username: " LOG_SECRET("'%s'") "\n"
-        "    Password: " LOG_SECRET("'%s'"),
-        eap_config.identity.c_str(), eap_config.username.c_str(), eap_config.password.c_str());
-    // clang-format on
-#if defined(USE_ESP32) && defined(USE_WIFI_WPA2_EAP) && ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
-    ESP_LOGV(TAG, "    TTLS Phase 2: " LOG_SECRET("'%s'"), eap_phase2_to_str(eap_config.ttls_phase_2));
-#endif
-    bool ca_cert_present = eap_config.ca_cert != nullptr && strlen(eap_config.ca_cert);
-    bool client_cert_present = eap_config.client_cert != nullptr && strlen(eap_config.client_cert);
-    bool client_key_present = eap_config.client_key != nullptr && strlen(eap_config.client_key);
-    ESP_LOGV(TAG,
-             "    CA Cert:     %s\n"
-             "    Client Cert: %s\n"
-             "    Client Key:  %s",
-             ca_cert_present ? "present" : "not present", client_cert_present ? "present" : "not present",
-             client_key_present ? "present" : "not present");
-  } else {
-#endif
-    ESP_LOGV(TAG, "  Password: " LOG_SECRET("'%s'"), ap.password_.c_str());
-#ifdef USE_WIFI_WPA2_EAP
-  }
-#endif
-  if (ap.has_channel()) {
-    ESP_LOGV(TAG, "  Channel: %u", ap.get_channel());
-  } else {
-    ESP_LOGV(TAG, "  Channel not set");
-  }
-#ifdef USE_WIFI_MANUAL_IP
-  auto manual_ip = ap.get_manual_ip();
-  if (manual_ip.has_value()) {
-    ManualIP m = *manual_ip;
-    char static_ip_buf[network::IP_ADDRESS_BUFFER_SIZE];
-    char gateway_buf[network::IP_ADDRESS_BUFFER_SIZE];
-    char subnet_buf[network::IP_ADDRESS_BUFFER_SIZE];
-    char dns1_buf[network::IP_ADDRESS_BUFFER_SIZE];
-    char dns2_buf[network::IP_ADDRESS_BUFFER_SIZE];
-    ESP_LOGV(TAG, "  Manual IP: Static IP=%s Gateway=%s Subnet=%s DNS1=%s DNS2=%s", m.static_ip.str_to(static_ip_buf),
-             m.gateway.str_to(gateway_buf), m.subnet.str_to(subnet_buf), m.dns1.str_to(dns1_buf),
-             m.dns2.str_to(dns2_buf));
-  } else
-#endif
-  {
-    ESP_LOGV(TAG, "  Using DHCP IP");
-  }
-  ESP_LOGV(TAG, "  Hidden: %s", YESNO(ap.get_hidden()));
-#endif
-#endif
-
-  ESP_LOGI(TAG, "wifi_sta_connect_ called");
+  ESP_LOGI(TAG, "start_connecting wifi_sta_connect_ called");
 
   ESP_LOGI(TAG, "cyw43_arch initializing...");
   if (cyw43_arch_init())
@@ -1181,22 +1107,11 @@ void WiFiComponent::start_connecting(const WiFiAP &ap) {
 
   cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
   ESP_LOGI(TAG, "turned on LED for debug");
-
-#if 0
-  // // Use beginNoBlock to avoid WiFi.begin()'s additional 2x timeout wait loop on top of
-  // // CYW43::begin()'s internal blocking join. CYW43::begin() blocks for up to 10 seconds
-  // // (default timeout) to complete the join - this is required because the LwipIntfDev netif
-  // // setup depends on begin() succeeding. beginNoBlock() skips the outer wait loop, saving
-  // // up to 20 additional seconds of blocking per attempt.
-  // auto ret = WiFi.beginNoBlock(ap.ssid_.c_str(), ap.password_.c_str());
-  // if (ret == WL_IDLE_STATUS)
-  //   return false;
-
+  
   // Clear any stale error from previous connection attempt.
   // This is the canonical location for clearing the flag since all connection
   // attempts go through start_connecting(). The only other clear is in
   // restart_adapter() which enters COOLDOWN without calling start_connecting().
-#endif
   this->error_from_callback_ = false;
 
   // Use the underlying implementation from pico/cyw43_arch.h to enable joining a WPA3 Personal network
@@ -1210,24 +1125,6 @@ void WiFiComponent::start_connecting(const WiFiAP &ap) {
   }
 
   this->action_started_ = millis();
-
-#if 0
-  // // Clear any stale error from previous connection attempt.
-  // // This is the canonical location for clearing the flag since all connection
-  // // attempts go through start_connecting(). The only other clear is in
-  // // restart_adapter() which enters COOLDOWN without calling start_connecting().
-  // this->error_from_callback_ = false;
-
-  // if (!this->wifi_sta_connect_(ap)) {
-  //   ESP_LOGE(TAG, "wifi_sta_connect_ failed");
-  //   // Enter cooldown to allow WiFi hardware to stabilize
-  //   // (immediate failure suggests hardware not ready, different from connection timeout)
-  //   this->state_ = WIFI_COMPONENT_STATE_COOLDOWN;
-  // } else {
-  //   this->state_ = WIFI_COMPONENT_STATE_STA_CONNECTING;
-  // }
-  // this->action_started_ = millis();
-#endif
 }
 
 const LogString *get_signal_bars(int8_t rssi) {
