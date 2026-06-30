@@ -1171,8 +1171,7 @@ void WiFiComponent::start_connecting(const WiFiAP &ap) {
   ESP_LOGI(TAG, "cyw43_arch initializing...");
   if (cyw43_arch_init())
 	{
-		ESP_LOGE(TAG, "cyw43_arch init failed");
-		return -1;
+		ESP_LOGE(TAG, "cyw43_arch init failed, continuing");
 	}
 
   cyw43_arch_enable_sta_mode();
