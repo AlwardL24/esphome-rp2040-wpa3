@@ -103,6 +103,21 @@ bool WiFiComponent::wifi_sta_connect_(const WiFiAP &ap) {
     return false;
 #endif
 
+  ESP_LOGV(TAG, "wifi_sta_connect_ called");
+
+  ESP_LOGV(TAG, "cyw43_arch initializing...");
+  if (cyw43_arch_init())
+	{
+		ESP_LOGV(TAG, "cyw43_arch init failed");
+		return -1;
+	}
+
+  cyw43_arch_enable_sta_mode();
+  ESP_LOGV(TAG, "cyw43_arch enabled sta_mode");
+
+  cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+  ESP_LOGV(TAG, "turned on LED for debug");
+
   // // Use beginNoBlock to avoid WiFi.begin()'s additional 2x timeout wait loop on top of
   // // CYW43::begin()'s internal blocking join. CYW43::begin() blocks for up to 10 seconds
   // // (default timeout) to complete the join - this is required because the LwipIntfDev netif
